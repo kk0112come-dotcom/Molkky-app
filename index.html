@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#fffef9">
+<title>MÖLKKY TRACKER</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Opti:wght@400;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fffef9;--bg2:#f7f5ee;--bg3:#eeeadf;
+  --ink:#1a1612;--ink2:#4a4540;--ink3:#9a9088;
+  --red:#c0392b;--green:#3a7d4a;--blue:#2c5f8a;--amber:#b07d2a;--teal:#2d6e6e;
+  --border:#c8c0b0;
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+  --f:'Zen Maru Gothic',sans-serif;--ft:'Kaisei Opti',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden;-webkit-text-size-adjust:100%;}
+
+/* ローディング */
+#loading-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.loading-logo{font-family:'Kaisei Opti',serif;font-size:2rem;color:var(--ink);}
+.loading-dots{display:flex;gap:6px;}
+.loading-dot{width:8px;height:8px;border-radius:50%;background:var(--ink3);animation:dot-bounce 1.2s infinite;}
+.loading-dot:nth-child(2){animation-delay:.2s;}
+.loading-dot:nth-child(3){animation-delay:.4s;}
+@keyframes dot-bounce{0%,80%,100%{transform:translateY(0);opacity:.4;}40%{transform:translateY(-8px);opacity:1;}}
+
+header{background:var(--bg);border-bottom:2px solid var(--ink);padding:calc(16px + var(--safe-top)) 20px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:flex-end;gap:10px;}
+.logo{font-family:'Kaisei Opti',serif;font-size:1.5rem;color:var(--ink);line-height:1;letter-spacing:.02em;}
+.logo-sub{font-family:'Zen Maru Gothic',sans-serif;font-size:.6rem;color:var(--ink3);letter-spacing:.25em;margin-bottom:3px;}
+.save-indicator{margin-left:auto;font-size:.65rem;color:var(--ink3);letter-spacing:.08em;opacity:0;transition:opacity .3s;}
+.save-indicator.show{opacity:1;}
+
+nav{display:flex;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:61px;z-index:99;overflow-x:auto;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex:1;min-width:56px;padding:11px 4px;border:none;background:transparent;font-family:'Zen Maru Gothic',sans-serif;font-size:.75rem;font-weight:500;color:var(--ink3);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;}
+.nav-btn.active{color:var(--ink);border-bottom-color:var(--ink);}
+
+.view{display:none;padding:20px 16px;max-width:560px;margin:0 auto;padding-bottom:calc(40px + var(--safe-bottom));}
+.view.active{display:block;}
+.sec-label{font-family:'Kaisei Opti',serif;font-size:.8rem;color:var(--ink2);letter-spacing:.12em;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+
+.tag-section{margin-bottom:20px;}
+.tag-group{display:flex;flex-wrap:wrap;gap:7px;}
+.tag{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink2);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;font-family:'Zen Maru Gothic',sans-serif;}
+.tag.sel{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.tag.add{border-style:dashed;color:var(--ink3);padding:4px 12px;}
+
+.score-box{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:28px 20px 20px;margin-bottom:22px;text-align:center;box-shadow:3px 3px 0 var(--bg3);}
+.score-main{font-family:'Kaisei Opti',serif;font-size:5rem;line-height:1;color:var(--ink);letter-spacing:-.02em;}
+.score-label{font-size:.65rem;letter-spacing:.2em;color:var(--ink3);margin-top:6px;font-weight:500;}
+.score-frac{font-size:.9rem;color:var(--ink2);margin-top:8px;}
+.score-sub{display:flex;margin-top:20px;padding-top:16px;border-top:1px dashed var(--border);}
+.score-sub-item{flex:1;text-align:center;border-right:1px dashed var(--border);padding:0 6px;}
+.score-sub-item:last-child{border-right:none;}
+.score-sub-val{font-family:'Kaisei Opti',serif;font-size:1.6rem;color:var(--ink);}
+.score-sub-val.v-red{color:var(--red);}
+.score-sub-label{font-size:.6rem;color:var(--ink3);margin-top:2px;letter-spacing:.06em;}
+
+.hit-label{font-size:.7rem;letter-spacing:.16em;color:var(--ink3);margin-bottom:10px;font-weight:500;}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;}
+.hit-btn{border:none;border-radius:10px;padding:20px 10px;font-family:'Zen Maru Gothic',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:3px 3px 0 rgba(0,0,0,.12);}
+.hit-btn:active{transform:scale(.96) translate(2px,2px);box-shadow:1px 1px 0 rgba(0,0,0,.12);}
+.btn-sub{font-size:.6rem;font-weight:400;letter-spacing:.08em;opacity:.8;}
+.btn-direct{background:#3a7d4a;color:#fff;grid-column:1/-1;}
+.btn-bound{background:#2c5f8a;color:#fff;}
+.btn-roll{background:#2d6e6e;color:#fff;}
+.btn-fail{background:#c0392b;color:#fff;grid-column:1/-1;padding:14px 10px;}
+
+.undo-btn{width:100%;padding:11px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink2);font-size:.84rem;cursor:pointer;border-radius:8px;margin-bottom:10px;font-family:'Zen Maru Gothic',sans-serif;transition:background .15s;}
+.undo-btn:hover{background:var(--bg2);}
+.save-btn{width:100%;padding:14px;border:none;background:var(--ink);color:var(--bg);font-family:'Zen Maru Gothic',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.12em;cursor:pointer;border-radius:8px;box-shadow:3px 3px 0 var(--bg3);transition:transform .1s;}
+.save-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--bg3);}
+.save-btn.amber{background:var(--amber);}
+.save-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.gacha-notice{font-size:.75rem;color:var(--ink2);padding:10px 14px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg2);margin-bottom:16px;line-height:1.6;}
+.gacha-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:16px;}
+.gacha-btn{aspect-ratio:1;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink2);font-family:'Kaisei Opti',serif;font-size:1.05rem;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;}
+.gacha-btn:active{transform:scale(.88);}
+.gacha-btn.zero{color:var(--red);border-color:rgba(192,57,43,.4);}
+.gacha-btn.flash-amber{background:var(--amber);color:#fff;border-color:var(--amber);}
+.gacha-btn.flash-red{background:var(--red);color:#fff;border-color:var(--red);}
+.gacha-log-box{background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;min-height:56px;}
+.gacha-log-label{font-size:.62rem;letter-spacing:.16em;color:var(--ink3);margin-bottom:10px;font-weight:500;}
+.gacha-bubbles{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.gacha-bubble{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Kaisei Opti',serif;font-size:1rem;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);}
+.gacha-bubble.good{background:var(--bg);color:var(--amber);border-color:var(--amber);}
+.gacha-bubble.bad{background:var(--bg);color:var(--red);border-color:var(--red);}
+.gacha-bubble:active{transform:scale(.85);}
+.gacha-stats-row{display:flex;align-items:center;gap:16px;padding-top:12px;border-top:1px dashed var(--border);flex-wrap:wrap;}
+.gacha-avg-big{font-family:'Kaisei Opti',serif;font-size:3rem;color:var(--ink);line-height:1;}
+.gacha-avg-unit{font-size:.75rem;color:var(--ink3);}
+.gacha-mini{display:flex;gap:16px;flex-wrap:wrap;}
+.gacha-mini-val{font-family:'Kaisei Opti',serif;font-size:1.2rem;color:var(--ink2);}
+.gacha-mini-label{font-size:.6rem;letter-spacing:.08em;color:var(--ink3);}
+.gacha-undo-btn{margin-left:auto;background:none;border:1.5px solid var(--border);color:var(--ink3);border-radius:6px;padding:5px 12px;font-size:.78rem;cursor:pointer;font-family:'Zen Maru Gothic',sans-serif;}
+
+.goal-tabs,.hist-tabs{display:flex;gap:0;margin-bottom:20px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;}
+.goal-tab,.hist-tab{flex:1;padding:10px 4px;border:none;background:transparent;font-family:'Zen Maru Gothic',sans-serif;font-size:.82rem;font-weight:500;color:var(--ink3);cursor:pointer;transition:all .18s;}
+.goal-tab.active,.hist-tab.active{background:var(--ink);color:var(--bg);}
+
+.goal-card,.hist-item{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:3px 3px 0 var(--bg3);}
+.hist-item{padding:16px;}
+.goal-card-header,.hist-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.goal-card-title{font-family:'Kaisei Opti',serif;font-size:1.05rem;color:var(--ink);}
+.goal-card-sub{font-size:.7rem;color:var(--ink3);margin-top:3px;}
+.goal-bar-bg{background:var(--bg3);border-radius:99px;height:8px;overflow:hidden;margin:10px 0 6px;}
+.goal-bar-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1);background:var(--ink);}
+.goal-bar-fill.near{background:var(--amber);}
+.goal-bar-fill.achieved{background:var(--green);}
+.goal-nums{display:flex;justify-content:space-between;align-items:baseline;}
+.goal-current{font-family:'Kaisei Opti',serif;font-size:2rem;color:var(--ink);line-height:1;}
+.goal-target-num{font-size:.72rem;color:var(--ink3);}
+.goal-pct{font-family:'Kaisei Opti',serif;font-size:1rem;color:var(--ink2);}
+.goal-badge-achieved{display:inline-flex;align-items:center;gap:4px;padding:3px 12px;border-radius:20px;background:var(--green);color:#fff;font-size:.7rem;font-weight:700;margin-top:8px;}
+.goal-badge-near{display:inline-flex;align-items:center;gap:4px;padding:3px 12px;border-radius:20px;background:var(--amber);color:#fff;font-size:.7rem;font-weight:700;margin-top:8px;}
+.goal-empty-tip{font-size:.82rem;color:var(--ink3);line-height:1.8;padding:20px;border:1.5px dashed var(--border);border-radius:10px;text-align:center;margin-bottom:16px;}
+.add-goal-btn{width:100%;padding:14px;border:1.5px dashed var(--border);background:transparent;color:var(--ink2);font-family:'Zen Maru Gothic',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;border-radius:10px;transition:all .15s;}
+.add-goal-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--bg2);}
+
+.hist-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.badge{padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;border:1.5px solid var(--border);background:var(--bg2);color:var(--ink2);}
+.b-dist{border-color:var(--blue);color:var(--blue);}
+.b-style{border-color:var(--green);color:var(--green);}
+.hist-date{font-size:.68rem;color:var(--ink3);}
+.hist-stats{display:flex;gap:14px;align-items:center;}
+.rate-big{font-family:'Kaisei Opti',serif;font-size:2.2rem;color:var(--ink);line-height:1;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;border:1.5px solid var(--border);color:var(--ink2);}
+.c1{border-color:var(--green);color:var(--green);}.c2{border-color:var(--blue);color:var(--blue);}.c3{border-color:var(--teal);color:var(--teal);}.cf{border-color:var(--red);color:var(--red);}
+.icon-btn,.del-btn{background:var(--bg2);border:1.5px solid var(--border);color:var(--ink2);border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;font-family:'Zen Maru Gothic',sans-serif;transition:all .15s;}
+.del-btn{color:var(--ink3);margin-left:4px;}
+.del-btn:hover{color:var(--red);border-color:var(--red);}
+.filter-row{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+.filter-row::-webkit-scrollbar{display:none;}
+.ghb{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Kaisei Opti',serif;font-size:.85rem;flex-shrink:0;border:1.5px solid var(--border);}
+.ghb.good{color:var(--amber);border-color:var(--amber);}.ghb.bad{color:var(--red);border-color:var(--red);}
+.stat-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;}
+.stat-row{display:flex;}
+.stat-item{flex:1;text-align:center;border-right:1px dashed var(--border);padding:6px 4px;}
+.stat-item:last-child{border-right:none;}
+.stat-val{font-family:'Kaisei Opti',serif;font-size:1.5rem;color:var(--ink);}
+.stat-val.red{color:var(--red);}
+.stat-label{font-size:.58rem;letter-spacing:.1em;color:var(--ink3);margin-top:2px;}
+
+.share-card{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:3px 3px 0 var(--bg3);}
+.share-card-title{font-family:'Kaisei Opti',serif;font-size:.75rem;letter-spacing:.2em;color:var(--ink3);margin-bottom:4px;}
+.share-card-date{font-family:'Kaisei Opti',serif;font-size:1.7rem;color:var(--ink);margin-bottom:20px;}
+.share-row{border-top:1px dashed var(--border);padding:14px 0;}
+.share-rate-big{font-family:'Kaisei Opti',serif;font-size:2.4rem;color:var(--ink);}
+.bar-bg{background:var(--bg3);border-radius:99px;height:4px;overflow:hidden;margin:8px 0;}
+.bar-fill{height:100%;background:var(--ink);border-radius:99px;}
+.share-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:14px;border-top:1px dashed var(--border);}
+.share-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.share-btn-line{padding:13px 10px;border-radius:8px;border:none;background:#06C755;color:#fff;font-family:'Zen Maru Gothic',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:3px 3px 0 rgba(0,0,0,.1);}
+.share-btn-copy{padding:13px 10px;border-radius:8px;border:none;background:var(--ink);color:var(--bg);font-family:'Zen Maru Gothic',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:3px 3px 0 rgba(0,0,0,.1);}
+.share-btn-native{grid-column:1/-1;padding:11px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--ink2);font-family:'Zen Maru Gothic',sans-serif;font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;}
+
+.overlay{position:fixed;inset:0;background:rgba(26,22,18,.5);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--bg);border-radius:16px 16px 0 0;padding:28px 20px calc(20px + var(--safe-bottom));width:100%;max-width:560px;max-height:88vh;overflow-y:auto;border-top:2px solid var(--ink);}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.modal h3{font-family:'Kaisei Opti',serif;font-size:1.15rem;color:var(--ink);margin-bottom:16px;}
+.inp{width:100%;padding:11px 13px;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;color:var(--ink);font-size:.95rem;font-family:'Zen Maru Gothic',sans-serif;margin-bottom:12px;outline:none;transition:border-color .2s;}
+.inp:focus{border-color:var(--ink);}
+.inp-row-label{font-size:.72rem;letter-spacing:.1em;color:var(--ink3);display:block;margin-bottom:5px;font-weight:500;}
+.modal-row{display:flex;gap:10px;margin-bottom:10px;}
+.modal-row>div{flex:1;}
+.modal-row label{font-size:.72rem;letter-spacing:.1em;color:var(--ink3);display:block;margin-bottom:4px;font-weight:500;}
+.modal-row .inp{margin-bottom:0;}
+.modal-actions{display:flex;gap:8px;margin-top:16px;}
+.btn-cancel{flex:1;padding:12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--ink2);font-size:.88rem;cursor:pointer;font-family:'Zen Maru Gothic',sans-serif;}
+.btn-ok{flex:1;padding:12px;border-radius:8px;border:none;background:var(--ink);color:var(--bg);font-size:.88rem;font-weight:700;font-family:'Zen Maru Gothic',sans-serif;cursor:pointer;box-shadow:3px 3px 0 var(--bg3);}
+.goal-type-toggle{display:flex;gap:6px;margin-bottom:16px;}
+.goal-type-btn{flex:1;padding:9px 4px;border:1.5px solid var(--border);background:transparent;color:var(--ink2);font-size:.82rem;border-radius:8px;cursor:pointer;font-family:'Zen Maru Gothic',sans-serif;font-weight:500;transition:all .15s;}
+.goal-type-btn.sel{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.date-picker-row{display:flex;gap:8px;margin-bottom:12px;}
+.date-picker-row>div{flex:1;}
+.date-picker-row label{font-size:.72rem;letter-spacing:.1em;color:var(--ink3);display:block;margin-bottom:4px;font-weight:500;}
+.date-picker-row input[type=date]{width:100%;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--border);border-radius:8px;color:var(--ink);font-size:.9rem;font-family:'Zen Maru Gothic',sans-serif;outline:none;}
+.date-picker-row input[type=date]:focus{border-color:var(--ink);}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a9088' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+
+.empty{text-align:center;padding:52px 16px;color:var(--ink3);font-size:.88rem;letter-spacing:.06em;}
+.empty-icon{font-size:2.2rem;margin-bottom:12px;opacity:.4;}
+.flash{position:fixed;top:72px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 24px;border-radius:99px;font-size:.82rem;letter-spacing:.08em;z-index:300;pointer-events:none;opacity:0;transition:opacity .2s;white-space:nowrap;font-family:'Zen Maru Gothic',sans-serif;font-weight:700;}
+.flash.show{opacity:1;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-logo">Mölkky</div>
+  <div style="font-size:.65rem;letter-spacing:.2em;color:var(--ink3);margin-top:-8px;">データを読み込んでいます...</div>
+  <div class="loading-dots">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="logo-sub">PRACTICE TRACKER</div>
+    <div class="logo">Mölkky</div>
+  </div>
+  <div class="save-indicator" id="save-indicator">保存中...</div>
+</header>
+<nav>
+  <button class="nav-btn active" onclick="showView('tanpin',this)">単品練習</button>
+  <button class="nav-btn" onclick="showView('gacha',this)">ガシャ</button>
+  <button class="nav-btn" onclick="showView('goal',this)">目標</button>
+  <button class="nav-btn" onclick="showView('history',this)">履歴</button>
+  <button class="nav-btn" onclick="showView('share',this)">共有</button>
+</nav>
+
+<div class="view active" id="view-tanpin">
+  <div class="tag-section">
+    <div class="sec-label">距 離</div>
+    <div class="tag-group" id="tanpin-dist-tags"></div>
+  </div>
+  <div class="tag-section">
+    <div class="sec-label">投げ方</div>
+    <div class="tag-group" id="tanpin-style-tags"></div>
+  </div>
+  <div class="score-box">
+    <div class="score-main" id="score-rate">—</div>
+    <div class="score-label">SUCCESS RATE</div>
+    <div class="score-frac" id="score-frac">0 投</div>
+    <div class="score-sub">
+      <div class="score-sub-item"><div class="score-sub-val" id="cnt-direct">0</div><div class="score-sub-label">直当て</div></div>
+      <div class="score-sub-item"><div class="score-sub-val" id="cnt-bound">0</div><div class="score-sub-label">バウンド</div></div>
+      <div class="score-sub-item"><div class="score-sub-val" id="cnt-roll">0</div><div class="score-sub-label">転がり</div></div>
+      <div class="score-sub-item"><div class="score-sub-val v-red" id="cnt-fail">0</div><div class="score-sub-label">失敗</div></div>
+    </div>
+  </div>
+  <div class="hit-label">タップして記録</div>
+  <div class="btn-grid">
+    <button class="hit-btn btn-direct" onclick="rec('direct')">直当て<span class="btn-sub">Direct Hit</span></button>
+    <button class="hit-btn btn-bound"  onclick="rec('bound')">バウンド<span class="btn-sub">One Bounce</span></button>
+    <button class="hit-btn btn-roll"   onclick="rec('roll')">転がり<span class="btn-sub">Roll In</span></button>
+    <button class="hit-btn btn-fail"   onclick="rec('fail')">失敗<span class="btn-sub">Miss</span></button>
+  </div>
+  <button class="undo-btn" onclick="doUndo()">← 1つ戻す</button>
+  <button class="save-btn" id="btn-save-tanpin" onclick="saveTanpin()">保 存 す る</button>
+</div>
+
+<div class="view" id="view-gacha">
+  <div class="gacha-notice">3.5 m 固定 ― 倒した本数をタップ（何投でも）</div>
+  <div class="gacha-grid" id="gacha-grid"></div>
+  <div class="gacha-log-box">
+    <div class="gacha-log-label">記録ログ ― バブルをタップで削除</div>
+    <div class="gacha-bubbles" id="gacha-bubbles"></div>
+    <div id="gacha-stats-row" style="display:none;">
+      <div class="gacha-stats-row">
+        <div><div class="gacha-avg-big" id="gacha-avg-val">—</div><div class="gacha-avg-unit">平均本数</div></div>
+        <div class="gacha-mini">
+          <div style="text-align:center"><div class="gacha-mini-val" id="gacha-max-val">—</div><div class="gacha-mini-label">最高</div></div>
+          <div style="text-align:center"><div class="gacha-mini-val" style="color:var(--red)" id="gacha-zero-val">0</div><div class="gacha-mini-label">失敗</div></div>
+          <div style="text-align:center"><div class="gacha-mini-val" id="gacha-count-val">0</div><div class="gacha-mini-label">投数</div></div>
+        </div>
+        <button class="gacha-undo-btn" onclick="undoGacha()">← 戻す</button>
+      </div>
+    </div>
+  </div>
+  <button class="save-btn amber" id="btn-save-gacha" onclick="saveGacha()">保 存 す る</button>
+</div>
+
+<div class="view" id="view-goal">
+  <div class="goal-tabs">
+    <button class="goal-tab active" id="gtab-tanpin" onclick="switchGoalTab('tanpin')">単品練習</button>
+    <button class="goal-tab" id="gtab-gacha" onclick="switchGoalTab('gacha')">ガシャ</button>
+  </div>
+  <div id="goal-tanpin-area"></div>
+  <div id="goal-gacha-area" style="display:none;"></div>
+</div>
+
+<div class="view" id="view-history">
+  <div class="hist-tabs">
+    <button class="hist-tab active" id="hist-tab-tanpin" onclick="switchHistTab('tanpin')">単品練習</button>
+    <button class="hist-tab" id="hist-tab-gacha" onclick="switchHistTab('gacha')">ガシャ</button>
+  </div>
+  <div id="hist-tanpin-area">
+    <div class="filter-row" id="hist-tanpin-filter"></div>
+    <div id="hist-tanpin-list"></div>
+  </div>
+  <div id="hist-gacha-area" style="display:none;"><div id="hist-gacha-list"></div></div>
+</div>
+
+<div class="view" id="view-share">
+  <div class="share-card"><div id="share-content"></div></div>
+  <div class="share-btns">
+    <button class="share-btn-line" onclick="shareToLine()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.630 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.630 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+      LINE で送る
+    </button>
+    <button class="share-btn-copy" onclick="copyText()">テキストコピー</button>
+    <button class="share-btn-native" onclick="nativeShare()">その他のアプリで共有</button>
+  </div>
+  <p style="font-size:.68rem;color:var(--ink3);text-align:center;letter-spacing:.08em;">スクリーンショットでも共有できます</p>
+</div>
+
+<!-- モーダル群 -->
+
+<div class="overlay" id="modal-addtag">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>項目を追加</h3>
+    <input class="inp" id="new-tag-input" placeholder="例：11m" maxlength="20" onkeydown="if(event.key==='Enter')addTag()">
+    <div style="font-size:.72rem;color:var(--ink3);margin-bottom:8px;font-weight:500;">種別</div>
+    <div style="display:flex;gap:6px;margin-bottom:4px;">
+      <button class="tag" id="type-dist" onclick="setTagType('dist')">距離</button>
+      <button class="tag" id="type-style" onclick="setTagType('style')">投げ方</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-addtag')">キャンセル</button>
+      <button class="btn-ok" onclick="addTag()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-edit-tanpin">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>記録を編集</h3>
+    <div style="font-size:.78rem;color:var(--ink3);margin-bottom:14px;" id="edit-tanpin-meta"></div>
+    <input type="hidden" id="edit-tanpin-id">
+    <div class="modal-row">
+      <div><label>直当て</label><input class="inp" id="edit-direct" type="number" min="0"></div>
+      <div><label>バウンド</label><input class="inp" id="edit-bound" type="number" min="0"></div>
+    </div>
+    <div class="modal-row">
+      <div><label>転がり</label><input class="inp" id="edit-roll" type="number" min="0"></div>
+      <div><label>失敗</label><input class="inp" id="edit-fail" type="number" min="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-edit-tanpin')">キャンセル</button>
+      <button class="btn-ok" onclick="saveEditTanpin()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-add-goal-tanpin">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>単品練習の目標</h3>
+    <label class="inp-row-label">距離</label>
+    <select class="inp" id="goal-tanpin-dist"></select>
+    <label class="inp-row-label">投げ方</label>
+    <select class="inp" id="goal-tanpin-style"></select>
+    <label class="inp-row-label">目標成功率 (%)</label>
+    <input class="inp" id="goal-tanpin-rate" type="number" min="1" max="100" placeholder="例：70">
+    <label class="inp-row-label">期間の種類</label>
+    <select class="inp" id="goal-tanpin-period-type" onchange="toggleDatePicker('tanpin')">
+      <option value="week">今週</option>
+      <option value="month">今月</option>
+      <option value="alltime">全期間</option>
+      <option value="custom">カスタム日付範囲</option>
+    </select>
+    <div id="goal-tanpin-datepicker" style="display:none;">
+      <div class="date-picker-row">
+        <div><label>開始日</label><input type="date" id="goal-tanpin-start"></div>
+        <div><label>終了日</label><input type="date" id="goal-tanpin-end"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-add-goal-tanpin')">キャンセル</button>
+      <button class="btn-ok" onclick="saveGoalTanpin()">設定する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-add-goal-gacha">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>ガシャの目標</h3>
+    <label class="inp-row-label">目標の種類</label>
+    <div class="goal-type-toggle">
+      <button class="goal-type-btn sel" id="ggt-avg" onclick="setGachaGoalType('avg')">平均本数</button>
+      <button class="goal-type-btn" id="ggt-zero" onclick="setGachaGoalType('zero')">失敗率を下げる</button>
+    </div>
+    <div id="ggt-avg-area">
+      <label class="inp-row-label">目標平均本数（本）</label>
+      <input class="inp" id="goal-gacha-avg" type="number" min="1" max="12" step="0.1" placeholder="例：6.5">
+    </div>
+    <div id="ggt-zero-area" style="display:none;">
+      <label class="inp-row-label">目標失敗率 (%) 以下</label>
+      <input class="inp" id="goal-gacha-zero" type="number" min="0" max="100" placeholder="例：20">
+    </div>
+    <label class="inp-row-label">期間の種類</label>
+    <select class="inp" id="goal-gacha-period-type" onchange="toggleDatePicker('gacha')">
+      <option value="week">今週</option>
+      <option value="month">今月</option>
+      <option value="alltime">全期間</option>
+      <option value="custom">カスタム日付範囲</option>
+    </select>
+    <div id="goal-gacha-datepicker" style="display:none;">
+      <div class="date-picker-row">
+        <div><label>開始日</label><input type="date" id="goal-gacha-start"></div>
+        <div><label>終了日</label><input type="date" id="goal-gacha-end"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-add-goal-gacha')">キャンセル</button>
+      <button class="btn-ok" onclick="saveGoalGacha()">設定する</button>
+    </div>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+/* ═══════════════════════════════
+   永続ストレージ（localStorage）
+═══════════════════════════════ */
+const KEYS = { masters:'mk_masters', tanpin:'mk_tanpin', gacha:'mk_gacha', goals:'mk_goals' };
+
+// Canvas環境・ローカル環境で動くように window.storage の代わりに localStorage を使用
+async function cloudLoad(key) {
+  try {
+    const r = localStorage.getItem(key);
+    return r ? JSON.parse(r) : null;
+  } catch(e) { return null; }
+}
+async function cloudSave(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) { console.error('save',key,e); }
+}
+
+/* ── アプリ状態 ── */
+let masters = {dist:['3.5m','4m','5m','6m','7m','8m','9m','10m'],style:['ノーマル','ふわり','バックハンド']};
+let tanpinRecs = [];
+let gachaRecs  = [];
+let goals      = [];
+
+let tanpinLog=[], tanpinDist=null, tanpinStyle=null;
+let gachaLog=[];
+let newTagType='dist';
+let histTabCurrent='tanpin', histTanpinFilter='all';
+let goalTabCurrent='tanpin', gachaGoalType='avg';
+
+/* ── 保存ヘルパー ── */
+let saveTimer;
+async function persistAll() {
+  showSaveIndicator();
+  await Promise.all([
+    cloudSave(KEYS.masters, masters),
+    cloudSave(KEYS.tanpin, tanpinRecs),
+    cloudSave(KEYS.gacha, gachaRecs),
+    cloudSave(KEYS.goals, goals),
+  ]);
+  hideSaveIndicator();
+}
+function deferredSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistAll, 500);
+}
+function showSaveIndicator() {
+  const el = document.getElementById('save-indicator');
+  el.textContent = '保存中...';
+  el.classList.add('show');
+}
+function hideSaveIndicator() {
+  const el = document.getElementById('save-indicator');
+  el.textContent = '保存済み ✓';
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+/* ── 起動時ロード ── */
+async function initApp() {
+  const [m, t, g, go] = await Promise.all([
+    cloudLoad(KEYS.masters),
+    cloudLoad(KEYS.tanpin),
+    cloudLoad(KEYS.gacha),
+    cloudLoad(KEYS.goals),
+  ]);
+  if (m) masters = m;
+  if (t) tanpinRecs = t;
+  if (g) gachaRecs = g;
+  if (go) goals = go;
+
+  document.getElementById('loading-screen').style.display = 'none';
+  renderTags(); updateScore(); buildGachaGrid(); renderGachaLog();
+}
+
+/* ── ユーティリティ ── */
+function calcStats(r){const d=+r.direct||0,b=+r.bound||0,ro=+r.roll||0,f=+r.fail||0;const tot=d+b+ro+f,suc=d+b+ro;return{direct:d,bound:b,roll:ro,fail:f,total:tot,success:suc,rate:tot===0?null:(suc/tot*100)};}
+function fmtRate(r){return r===null?'—':r.toFixed(1)+'%';}
+function gachaAvg(a){return a.length===0?null:a.reduce((s,v)=>s+v,0)/a.length;}
+function periodLabel(g){if(g.periodType==='custom'&&g.startDate&&g.endDate)return`${g.startDate}〜${g.endDate}`;return{week:'今週',month:'今月',alltime:'全期間'}[g.periodType||g.period]||'全期間';}
+function filterByPeriod(recs,g){
+  const pt=g.periodType||g.period||'alltime',now=new Date();
+  if(pt==='custom'){const s=g.startDate?new Date(g.startDate+'T00:00:00'):null,e=g.endDate?new Date(g.endDate+'T23:59:59'):null;return recs.filter(r=>{const d=new Date(r.date);return(!s||d>=s)&&(!e||d<=e);});}
+  return recs.filter(r=>{const d=new Date(r.date);if(pt==='week'){const s=new Date(now);s.setDate(s.getDate()-s.getDay());s.setHours(0,0,0,0);return d>=s;}if(pt==='month')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();return true;});
+}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function toggleDatePicker(type){const sel=document.getElementById(`goal-${type}-period-type`),dp=document.getElementById(`goal-${type}-datepicker`);dp.style.display=sel.value==='custom'?'block':'none';if(sel.value==='custom'){document.getElementById(`goal-${type}-start`).value=todayStr();document.getElementById(`goal-${type}-end`).value=todayStr();}}
+
+/* ── タグ ── */
+function renderTags(){
+  const dg=document.getElementById('tanpin-dist-tags'),sg=document.getElementById('tanpin-style-tags');
+  if(!dg||!sg)return;
+  dg.innerHTML='';sg.innerHTML='';
+  masters.dist.forEach(v=>dg.appendChild(mkTag(v,tanpinDist===v,()=>{tanpinDist=v;renderTags();})));
+  dg.appendChild(mkAddTag(()=>openAddTag('dist')));
+  masters.style.forEach(v=>sg.appendChild(mkTag(v,tanpinStyle===v,()=>{tanpinStyle=v;renderTags();})));
+  sg.appendChild(mkAddTag(()=>openAddTag('style')));
+}
+function mkTag(t,sel,fn){const b=document.createElement('button');b.className='tag'+(sel?' sel':'');b.textContent=t;b.onclick=fn;return b;}
+function mkAddTag(fn){const b=document.createElement('button');b.className='tag add';b.textContent='＋';b.onclick=fn;return b;}
+
+/* ── 単品練習 ── */
+function rec(type){tanpinLog.push(type);updateScore();if(navigator.vibrate)navigator.vibrate(20);}
+function doUndo(){if(!tanpinLog.length){flash('記録がありません');return;}tanpinLog.pop();updateScore();flash('取り消しました');}
+function updateScore(){
+  const s=calcStats({direct:tanpinLog.filter(x=>x==='direct').length,bound:tanpinLog.filter(x=>x==='bound').length,roll:tanpinLog.filter(x=>x==='roll').length,fail:tanpinLog.filter(x=>x==='fail').length});
+  document.getElementById('cnt-direct').textContent=s.direct;
+  document.getElementById('cnt-bound').textContent=s.bound;
+  document.getElementById('cnt-roll').textContent=s.roll;
+  document.getElementById('cnt-fail').textContent=s.fail;
+  document.getElementById('score-frac').textContent=s.total===0?'0 投':`${s.success} / ${s.total} 投`;
+  document.getElementById('score-rate').textContent=fmtRate(s.rate);
+}
+async function saveTanpin(){
+  if(!tanpinLog.length){flash('記録がありません');return;}
+  if(!tanpinDist||!tanpinStyle){flash('距離と投げ方を選択してください');return;}
+  const s=calcStats({direct:tanpinLog.filter(x=>x==='direct').length,bound:tanpinLog.filter(x=>x==='bound').length,roll:tanpinLog.filter(x=>x==='roll').length,fail:tanpinLog.filter(x=>x==='fail').length});
+  tanpinRecs.unshift({id:Date.now(),dist:tanpinDist,style:tanpinStyle,direct:s.direct,bound:s.bound,roll:s.roll,fail:s.fail,total:s.total,date:new Date().toISOString()});
+  tanpinLog=[];updateScore();flash('保存しました ✓');deferredSave();
+}
+
+/* ── ガシャ ── */
+function buildGachaGrid(){const grid=document.getElementById('gacha-grid');grid.innerHTML='';for(let i=0;i<=12;i++){const b=document.createElement('button'),n=i;b.className='gacha-btn'+(i===0?' zero':'');b.textContent=i;b.onclick=()=>addGacha(n);grid.appendChild(b);}}
+function addGacha(n){gachaLog.push(n);if(navigator.vibrate)navigator.vibrate(18);const btns=document.querySelectorAll('.gacha-btn'),cls=n===0?'flash-red':'flash-amber';btns[n].classList.add(cls);setTimeout(()=>btns[n].classList.remove(cls),300);renderGachaLog();}
+function undoGacha(){if(!gachaLog.length){flash('記録がありません');return;}gachaLog.pop();renderGachaLog();flash('取り消しました');}
+function renderGachaLog(){
+  const bEl=document.getElementById('gacha-bubbles'),sEl=document.getElementById('gacha-stats-row');
+  bEl.innerHTML='';
+  if(!gachaLog.length){sEl.style.display='none';return;}
+  gachaLog.forEach((v,i)=>{const b=document.createElement('div');b.className='gacha-bubble '+(v===0?'bad':'good');b.textContent=v;b.onclick=()=>{gachaLog.splice(i,1);renderGachaLog();};bEl.appendChild(b);});
+  sEl.style.display='block';
+  const avg=gachaAvg(gachaLog);
+  document.getElementById('gacha-avg-val').textContent=avg===null?'—':avg.toFixed(1);
+  document.getElementById('gacha-max-val').textContent=Math.max(...gachaLog);
+  document.getElementById('gacha-zero-val').textContent=gachaLog.filter(v=>v===0).length;
+  document.getElementById('gacha-count-val').textContent=gachaLog.length;
+}
+async function saveGacha(){
+  if(!gachaLog.length){flash('ガシャを記録してください');return;}
+  const avg=gachaAvg(gachaLog);
+  gachaRecs.unshift({id:Date.now(),gachaLog:[...gachaLog],avg,max:Math.max(...gachaLog),zeros:gachaLog.filter(v=>v===0).length,count:gachaLog.length,date:new Date().toISOString()});
+  gachaLog=[];renderGachaLog();flash('保存しました ✓');deferredSave();
+}
+
+/* ── 目標 ── */
+function switchGoalTab(tab){goalTabCurrent=tab;document.getElementById('gtab-tanpin').classList.toggle('active',tab==='tanpin');document.getElementById('gtab-gacha').classList.toggle('active',tab==='gacha');document.getElementById('goal-tanpin-area').style.display=tab==='tanpin'?'block':'none';document.getElementById('goal-gacha-area').style.display=tab==='gacha'?'block':'none';renderGoals();}
+function renderGoals(){goalTabCurrent==='tanpin'?renderGoalTanpin():renderGoalGacha();}
+
+function renderGoalTanpin(){
+  const area=document.getElementById('goal-tanpin-area');area.innerHTML='';
+  const gs=goals.filter(g=>g.type==='tanpin');
+  if(!gs.length)area.innerHTML=`<div class="goal-empty-tip">距離・投げ方ごとに<br>成功率の目標を設定できます</div>`;
+  else gs.forEach(g=>area.appendChild(buildGoalCardTanpin(g)));
+  const btn=document.createElement('button');btn.className='add-goal-btn';btn.textContent='＋ 目標を追加する';btn.onclick=openAddGoalTanpin;area.appendChild(btn);
+}
+function buildGoalCardTanpin(g){
+  const recs=filterByPeriod(tanpinRecs,g).filter(r=>(g.dist==='すべて'||r.dist===g.dist)&&(g.style==='すべて'||r.style===g.style));
+  const tot=recs.reduce((a,r)=>a+(+r.total||0),0),suc=recs.reduce((a,r)=>a+(+r.direct||0)+(+r.bound||0)+(+r.roll||0),0);
+  const cur=tot===0?null:(suc/tot*100),pct=cur===null?0:Math.min(100,cur/g.rate*100);
+  const achieved=cur!==null&&cur>=g.rate,near=!achieved&&cur!==null&&cur>=g.rate*.85;
+  const fillCls=achieved?'achieved':near?'near':'';
+  const div=document.createElement('div');div.className='goal-card';
+  div.innerHTML=`<div class="goal-card-header"><div><div class="goal-card-title">${g.dist} / ${g.style}</div><div class="goal-card-sub">${periodLabel(g)}</div></div><button class="del-btn" onclick="delGoal(${g.id})">削除</button></div>
+  <div class="goal-nums"><div><span class="goal-current">${cur===null?'—':cur.toFixed(1)}<span style="font-size:1rem;font-weight:400;">%</span></span><div style="font-size:.65rem;color:var(--ink3);margin-top:2px;">${tot}投 記録済</div></div><div style="text-align:right;"><div class="goal-target-num">目標 <b style="font-family:'Kaisei Opti',serif;font-size:1.1rem;color:var(--ink);">${g.rate}%</b></div><div class="goal-pct">${pct.toFixed(0)}%達成</div></div></div>
+  <div class="goal-bar-bg"><div class="goal-bar-fill ${fillCls}" style="width:${pct}%"></div></div>
+  ${achieved?`<div class="goal-badge-achieved">✓ 達成！</div>`:near?`<div class="goal-badge-near">あと少し！</div>`:''}`;
+  return div;
+}
+function renderGoalGacha(){
+  const area=document.getElementById('goal-gacha-area');area.innerHTML='';
+  const gs=goals.filter(g=>g.type==='gacha');
+  if(!gs.length)area.innerHTML=`<div class="goal-empty-tip">ガシャの平均本数や<br>失敗率の目標を設定できます</div>`;
+  else gs.forEach(g=>area.appendChild(buildGoalCardGacha(g)));
+  const btn=document.createElement('button');btn.className='add-goal-btn';btn.textContent='＋ 目標を追加する';btn.onclick=openAddGoalGacha;area.appendChild(btn);
+}
+function buildGoalCardGacha(g){
+  const recs=filterByPeriod(gachaRecs,g),allLog=recs.flatMap(r=>r.gachaLog||[]);
+  const div=document.createElement('div');div.className='goal-card';
+  let html=`<div class="goal-card-header"><div><div class="goal-card-title">${g.metric==='avg'?'平均本数':'失敗率'}</div><div class="goal-card-sub">${periodLabel(g)}</div></div><button class="del-btn" onclick="delGoal(${g.id})">削除</button></div>`;
+  if(g.metric==='avg'){
+    const cur=gachaAvg(allLog),achieved=cur!==null&&cur>=g.value,near=!achieved&&cur!==null&&cur>=g.value*.85;
+    const pct=cur===null?0:Math.min(100,(cur/g.value)*100),fillCls=achieved?'achieved':near?'near':'';
+    html+=`<div class="goal-nums"><div><span class="goal-current">${cur===null?'—':cur.toFixed(1)}<span style="font-size:1rem;font-weight:400;">本</span></span><div style="font-size:.65rem;color:var(--ink3);margin-top:2px;">${allLog.length}投 記録済</div></div><div style="text-align:right;"><div class="goal-target-num">目標 <b style="font-family:'Kaisei Opti',serif;font-size:1.1rem;color:var(--ink);">${g.value}本</b></div><div class="goal-pct">${pct.toFixed(0)}%達成</div></div></div><div class="goal-bar-bg"><div class="goal-bar-fill ${fillCls}" style="width:${pct}%"></div></div>${achieved?`<div class="goal-badge-achieved">✓ 達成！</div>`:near?`<div class="goal-badge-near">あと少し！</div>`:''}`;
+  } else {
+    const zeros=allLog.filter(v=>v===0).length,zeroRate=allLog.length===0?null:(zeros/allLog.length*100);
+    const achieved=zeroRate!==null&&zeroRate<=g.value,near=!achieved&&zeroRate!==null&&zeroRate<=g.value*1.2;
+    const pct=zeroRate===null?0:Math.min(100,zeroRate===0?100:Math.max(0,(1-(Math.max(0,zeroRate-g.value)/Math.max(1,zeroRate)))*100));
+    const fillCls=achieved?'achieved':near?'near':'';
+    html+=`<div class="goal-nums"><div><span class="goal-current">${zeroRate===null?'—':zeroRate.toFixed(1)}<span style="font-size:1rem;font-weight:400;">%</span></span><div style="font-size:.65rem;color:var(--ink3);margin-top:2px;">${allLog.length}投 記録済</div></div><div style="text-align:right;"><div class="goal-target-num">目標 <b style="font-family:'Kaisei Opti',serif;font-size:1.1rem;color:var(--ink);">${g.value}%</b>以下</div><div class="goal-pct">${pct.toFixed(0)}%達成</div></div></div><div class="goal-bar-bg"><div class="goal-bar-fill ${fillCls}" style="width:${pct}%"></div></div>${achieved?`<div class="goal-badge-achieved">✓ 達成！</div>`:near?`<div class="goal-badge-near">あと少し！</div>`:''}`;
+  }
+  div.innerHTML=html;return div;
+}
+async function delGoal(id){if(!confirm('目標を削除しますか？'))return;goals=goals.filter(g=>g.id!==id);flash('削除しました');deferredSave();renderGoals();}
+
+function openAddGoalTanpin(){
+  document.getElementById('goal-tanpin-dist').innerHTML=`<option value="すべて">すべての距離</option>${masters.dist.map(d=>`<option value="${d}">${d}</option>`).join('')}`;
+  document.getElementById('goal-tanpin-style').innerHTML=`<option value="すべて">すべての投げ方</option>${masters.style.map(s=>`<option value="${s}">${s}</option>`).join('')}`;
+  document.getElementById('goal-tanpin-rate').value='';
+  document.getElementById('goal-tanpin-period-type').value='week';
+  document.getElementById('goal-tanpin-datepicker').style.display='none';
+  openModal('modal-add-goal-tanpin');
+}
+async function saveGoalTanpin(){
+  const dist=document.getElementById('goal-tanpin-dist').value,style=document.getElementById('goal-tanpin-style').value;
+  const rate=parseFloat(document.getElementById('goal-tanpin-rate').value),pt=document.getElementById('goal-tanpin-period-type').value;
+  if(!rate||rate<1||rate>100){flash('成功率を正しく入力してください');return;}
+  const g={id:Date.now(),type:'tanpin',dist,style,rate,periodType:pt};
+  if(pt==='custom'){g.startDate=document.getElementById('goal-tanpin-start').value;g.endDate=document.getElementById('goal-tanpin-end').value;if(!g.startDate||!g.endDate){flash('開始日と終了日を入力してください');return;}}
+  goals.push(g);flash('目標を設定しました ✓');deferredSave();closeModal('modal-add-goal-tanpin');renderGoals();
+}
+function openAddGoalGacha(){setGachaGoalType('avg');document.getElementById('goal-gacha-avg').value='';document.getElementById('goal-gacha-zero').value='';document.getElementById('goal-gacha-period-type').value='week';document.getElementById('goal-gacha-datepicker').style.display='none';openModal('modal-add-goal-gacha');}
+function setGachaGoalType(t){gachaGoalType=t;document.getElementById('ggt-avg').classList.toggle('sel',t==='avg');document.getElementById('ggt-zero').classList.toggle('sel',t==='zero');document.getElementById('ggt-avg-area').style.display=t==='avg'?'block':'none';document.getElementById('ggt-zero-area').style.display=t==='zero'?'block':'none';}
+async function saveGoalGacha(){
+  const pt=document.getElementById('goal-gacha-period-type').value;
+  let value;
+  if(gachaGoalType==='avg'){value=parseFloat(document.getElementById('goal-gacha-avg').value);if(!value||value<0){flash('平均本数を入力してください');return;}}
+  else{value=parseFloat(document.getElementById('goal-gacha-zero').value);if(isNaN(value)||value<0||value>100){flash('失敗率を正しく入力してください');return;}}
+  const g={id:Date.now(),type:'gacha',metric:gachaGoalType,value,periodType:pt};
+  if(pt==='custom'){g.startDate=document.getElementById('goal-gacha-start').value;g.endDate=document.getElementById('goal-gacha-end').value;if(!g.startDate||!g.endDate){flash('開始日と終了日を入力してください');return;}}
+  goals.push(g);flash('目標を設定しました ✓');deferredSave();closeModal('modal-add-goal-gacha');renderGoals();
+}
+
+/* ── 履歴 ── */
+function switchHistTab(tab){histTabCurrent=tab;document.getElementById('hist-tab-tanpin').classList.toggle('active',tab==='tanpin');document.getElementById('hist-tab-gacha').classList.toggle('active',tab==='gacha');document.getElementById('hist-tanpin-area').style.display=tab==='tanpin'?'block':'none';document.getElementById('hist-gacha-area').style.display=tab==='gacha'?'block':'none';tab==='tanpin'?renderHistTanpin():renderHistGacha();}
+function renderHistTanpin(){
+  const fr=document.getElementById('hist-tanpin-filter');fr.innerHTML='';
+  [['all','すべて'],...masters.dist.map(d=>[d,d])].forEach(([val,label])=>{fr.appendChild(mkTag(label,histTanpinFilter===val,()=>{histTanpinFilter=val;renderHistTanpin();}));});
+  const list=document.getElementById('hist-tanpin-list');list.innerHTML='';
+  if(tanpinRecs.length){
+    const allS=tanpinRecs.reduce((a,r)=>a+(+r.direct||0)+(+r.bound||0)+(+r.roll||0),0),allT=tanpinRecs.reduce((a,r)=>a+(+r.total||0),0);
+    const st=document.createElement('div');
+    st.innerHTML=`<div class="sec-label" style="margin-bottom:10px;">全期間統計</div><div class="stat-card"><div class="stat-row"><div class="stat-item"><div class="stat-val">${allT===0?'—':(allS/allT*100).toFixed(1)}%</div><div class="stat-label">総合成功率</div></div><div class="stat-item"><div class="stat-val">${allT}</div><div class="stat-label">総投数</div></div><div class="stat-item"><div class="stat-val">${tanpinRecs.reduce((a,r)=>a+(+r.direct||0),0)}</div><div class="stat-label">直当て</div></div><div class="stat-item"><div class="stat-val red">${tanpinRecs.reduce((a,r)=>a+(+r.fail||0),0)}</div><div class="stat-label">失敗</div></div></div></div><div class="sec-label" style="margin-bottom:10px;">練習ログ</div>`;
+    list.appendChild(st);
+  }
+  const filtered=histTanpinFilter==='all'?tanpinRecs:tanpinRecs.filter(r=>r.dist===histTanpinFilter);
+  if(!filtered.length){list.appendChild(emptyEl());return;}
+  filtered.forEach(r=>{
+    const s=calcStats(r),d=new Date(r.date);
+    const ds=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const el=document.createElement('div');el.className='hist-item';
+    el.innerHTML=`<div class="hist-header"><div class="hist-meta"><span class="badge b-dist">${r.dist}</span><span class="badge b-style">${r.style}</span><span class="hist-date">${ds}</span></div><div><button class="icon-btn" onclick="openEditTanpin(${r.id})">編集</button><button class="del-btn" onclick="delTanpin(${r.id})">削除</button></div></div><div class="hist-stats"><div class="rate-big">${fmtRate(s.rate)}</div><div><div style="font-size:.82rem;color:var(--ink2);margin-bottom:6px;">${s.success} / ${s.total} 投</div><div class="chips"><span class="chip c1">直 ${r.direct}</span><span class="chip c2">バ ${r.bound}</span><span class="chip c3">転 ${r.roll}</span><span class="chip cf">✕ ${r.fail}</span></div></div></div>`;
+    list.appendChild(el);
+  });
+}
+function renderHistGacha(){
+  const list=document.getElementById('hist-gacha-list');list.innerHTML='';
+  const allG=gachaRecs.flatMap(r=>r.gachaLog||[]);
+  if(allG.length){
+    const avg=gachaAvg(allG),max=Math.max(...allG),zeros=allG.filter(v=>v===0).length;
+    const st=document.createElement('div');
+    st.innerHTML=`<div class="sec-label" style="margin-bottom:10px;">全期間統計 — ${allG.length}投</div><div class="stat-card"><div class="stat-row"><div class="stat-item"><div class="stat-val">${avg.toFixed(1)}</div><div class="stat-label">平均本数</div></div><div class="stat-item"><div class="stat-val">${max}</div><div class="stat-label">最高</div></div><div class="stat-item"><div class="stat-val red">${zeros}</div><div class="stat-label">失敗数</div></div><div class="stat-item"><div class="stat-val red">${((zeros/allG.length)*100).toFixed(0)}%</div><div class="stat-label">失敗率</div></div></div></div><div class="sec-label" style="margin-bottom:10px;">練習ログ</div>`;
+    list.appendChild(st);
+  }
+  if(!gachaRecs.length){list.appendChild(emptyEl());return;}
+  gachaRecs.forEach(r=>{
+    const d=new Date(r.date),gl=r.gachaLog||[];
+    const ds=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const el=document.createElement('div');el.className='hist-item';
+    el.innerHTML=`<div class="hist-header"><div class="hist-meta"><span class="hist-date">${ds}</span></div><div><button class="del-btn" onclick="delGacha(${r.id})">削除</button></div></div><div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;"><div style="font-family:'Kaisei Opti',serif;font-size:2.6rem;color:var(--ink);line-height:1;">${r.avg!==null?r.avg.toFixed(1):'—'}</div><div><div style="font-size:.68rem;color:var(--ink3);margin-bottom:4px;">平均本数</div><div class="chips"><span class="chip" style="border-color:var(--amber);color:var(--amber);">最高 ${r.max}本</span><span class="chip cf">失敗 ${r.zeros}回</span><span class="chip">${r.count}投</span></div></div></div><div style="display:flex;flex-wrap:wrap;gap:5px;">${gl.map(v=>`<div class="ghb ${v===0?'bad':'good'}">${v}</div>`).join('')}</div>`;
+    list.appendChild(el);
+  });
+}
+function emptyEl(){const e=document.createElement('div');e.className='empty';e.innerHTML='<div class="empty-icon">—</div><div>記録がありません</div>';return e;}
+async function delTanpin(id){if(!confirm('削除しますか？'))return;tanpinRecs=tanpinRecs.filter(r=>r.id!==id);flash('削除しました');deferredSave();renderHistTanpin();}
+async function delGacha(id){if(!confirm('削除しますか？'))return;gachaRecs=gachaRecs.filter(r=>r.id!==id);flash('削除しました');deferredSave();renderHistGacha();}
+function openEditTanpin(id){
+  const r=tanpinRecs.find(x=>x.id===id);if(!r)return;
+  document.getElementById('edit-tanpin-id').value=id;
+  document.getElementById('edit-tanpin-meta').textContent=`${r.dist} / ${r.style}`;
+  document.getElementById('edit-direct').value=r.direct;document.getElementById('edit-bound').value=r.bound;
+  document.getElementById('edit-roll').value=r.roll;document.getElementById('edit-fail').value=r.fail;
+  openModal('modal-edit-tanpin');
+}
+async function saveEditTanpin(){
+  const id=+document.getElementById('edit-tanpin-id').value,r=tanpinRecs.find(x=>x.id===id);if(!r)return;
+  r.direct=Math.max(0,+document.getElementById('edit-direct').value||0);r.bound=Math.max(0,+document.getElementById('edit-bound').value||0);
+  r.roll=Math.max(0,+document.getElementById('edit-roll').value||0);r.fail=Math.max(0,+document.getElementById('edit-fail').value||0);
+  r.total=r.direct+r.bound+r.roll+r.fail;
+  flash('更新しました');deferredSave();closeModal('modal-edit-tanpin');renderHistTanpin();
+}
+
+/* ── 共有 ── */
+function buildShareText(){
+  const today=new Date(),iso=today.toISOString().slice(0,10);
+  const todayT=tanpinRecs.filter(r=>r.date.slice(0,10)===iso),todayG=gachaRecs.filter(r=>r.date.slice(0,10)===iso);
+  if(!todayT.length&&!todayG.length)return null;
+  let text=`Mölkky 練習サマリー\n${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}\n${'─'.repeat(22)}\n`;
+  if(todayT.length){let ts=0,tt=0;text+='\n[ 単品練習 ]\n';todayT.forEach(r=>{const s=calcStats(r);ts+=s.success;tt+=s.total;text+=`${r.dist} / ${r.style}: ${fmtRate(s.rate)} (${s.success}/${s.total}投)\n`;});if(tt>0)text+=`→ 合計: ${(ts/tt*100).toFixed(1)}% (${ts}/${tt}投)\n`;}
+  if(todayG.length){const allG=todayG.flatMap(r=>r.gachaLog||[]),avg=gachaAvg(allG);text+='\n[ ガシャ練習 ]\n';todayG.forEach(r=>{text+=`${r.count}投 / 平均${r.avg.toFixed(1)}本 / 最高${r.max}本 / 失敗${r.zeros}回\n`;});if(allG.length>0)text+=`→ 本日合計: ${allG.length}投 / 平均${avg.toFixed(1)}本\n`;}
+  text+=`\n${'─'.repeat(22)}\nMölkky Practice Tracker`;
+  return text;
+}
+function renderShare(){
+  const today=new Date(),iso=today.toISOString().slice(0,10);
+  const todayT=tanpinRecs.filter(r=>r.date.slice(0,10)===iso),todayG=gachaRecs.filter(r=>r.date.slice(0,10)===iso);
+  const sc=document.getElementById('share-content');
+  let html=`<div class="share-card-title">Practice Summary</div><div class="share-card-date">${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}</div>`;
+  if(!todayT.length&&!todayG.length){html+='<div class="empty" style="padding:28px 0;"><div class="empty-icon">—</div><div>今日の記録がありません</div></div>';}
+  else{
+    if(todayT.length){let ts=0,tt=0;html+=`<div class="sec-label" style="margin-bottom:10px;">単品練習</div>`;todayT.forEach(r=>{const s=calcStats(r);ts+=s.success;tt+=s.total;const bw=s.rate!==null?Math.min(100,s.rate):0;html+=`<div class="share-row"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;gap:5px;"><span class="badge b-dist">${r.dist}</span><span class="badge b-style">${r.style}</span></div><div class="share-rate-big">${fmtRate(s.rate)}</div></div><div class="bar-bg"><div class="bar-fill" style="width:${bw}%"></div></div><div class="chips"><span class="chip c1">直 ${r.direct}</span><span class="chip c2">バ ${r.bound}</span><span class="chip c3">転 ${r.roll}</span><span class="chip cf">✕ ${r.fail}</span></div></div>`;});if(tt>0)html+=`<div style="text-align:right;font-family:'Kaisei Opti',serif;font-size:1rem;color:var(--ink2);margin:8px 0 16px;">合計 ${(ts/tt*100).toFixed(1)}%</div>`;}
+    if(todayG.length){const allG=todayG.flatMap(r=>r.gachaLog||[]),avg=gachaAvg(allG);html+=`<div class="sec-label" style="margin-bottom:10px;">ガシャ練習</div>`;todayG.forEach(r=>{html+=`<div class="share-row"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:.78rem;color:var(--ink3);">${r.count}投</div><div style="font-family:'Kaisei Opti',serif;font-size:2rem;color:var(--ink);">${r.avg!==null?r.avg.toFixed(1):'—'}<span style="font-size:.8rem;color:var(--ink3);font-family:'Zen Maru Gothic',sans-serif;"> 本</span></div></div><div class="chips"><span class="chip" style="border-color:var(--amber);color:var(--amber);">最高 ${r.max}本</span><span class="chip cf">失敗 ${r.zeros}回</span></div></div>`;});if(avg!==null)html+=`<div style="text-align:right;font-family:'Kaisei Opti',serif;font-size:1rem;color:var(--ink2);margin-top:8px;">ガシャ平均 ${avg.toFixed(1)}本</div>`;}
+  }
+  html+=`<div class="share-footer"><div style="font-family:'Kaisei Opti',serif;font-size:.85rem;color:var(--ink3);">Mölkky Tracker</div><div style="font-size:.68rem;color:var(--ink3);">${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}</div></div>`;
+  sc.innerHTML=html;
+}
+function shareToLine(){const t=buildShareText();if(!t){flash('今日の記録がありません');return;}window.open(`https://line.me/R/msg/text/?${encodeURIComponent(t)}`,'_blank');}
+function copyText(){const t=buildShareText();if(!t){flash('今日の記録がありません');return;}if(navigator.clipboard){navigator.clipboard.writeText(t).then(()=>flash('コピーしました'));}else{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');document.body.removeChild(a);flash('コピーしました');}}
+async function nativeShare(){const t=buildShareText();if(!t){flash('今日の記録がありません');return;}if(navigator.share){try{await navigator.share({title:'Mölkky 練習サマリー',text:t});}catch{}}else copyText();}
+
+/* ── タグ追加 ── */
+function openAddTag(type){newTagType=type;document.getElementById('new-tag-input').value='';setTagType(type);openModal('modal-addtag');setTimeout(()=>document.getElementById('new-tag-input').focus(),150);}
+function setTagType(type){newTagType=type;document.getElementById('type-dist').classList.toggle('sel',type==='dist');document.getElementById('type-style').classList.toggle('sel',type==='style');}
+async function addTag(){
+  const v=document.getElementById('new-tag-input').value.trim();
+  if(!v){flash('名前を入力してください');return;}
+  if(masters[newTagType].includes(v)){flash('すでに存在します');return;}
+  masters[newTagType].push(v);flash('追加しました');deferredSave();closeModal('modal-addtag');renderTags();
+}
+
+/* ── ナビ ── */
+function showView(v,btn){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(v==='history'){histTabCurrent==='tanpin'?renderHistTanpin():renderHistGacha();}
+  if(v==='share')renderShare();
+  if(v==='goal')renderGoals();
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
+let flashTimer;
+function flash(msg){const f=document.getElementById('flash');f.textContent=msg;f.classList.add('show');clearTimeout(flashTimer);flashTimer=setTimeout(()=>f.classList.remove('show'),2200);}
+
+/* ── 起動 ── */
+initApp();
+</script>
+
+</body>
+</html>
+
